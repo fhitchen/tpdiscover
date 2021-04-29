@@ -4,8 +4,19 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"os"
 )
+
+
+type Server struct {
+	Comment   string `xml:",comment"`
+	Name   string `xml:"name,attr"`
+	Min    string `xml:"min"`
+	Max    string `xml:"max"`
+	Srvid  string `xml:"srvid"`
+	Sysopt string `xml:"sysopt"`
+	Cctag  string `xml:"cctag"`
+	Appopt string `xml:"appopt"`
+}
 
 type Endurox struct {
 	XMLName   xml.Name `xml:"endurox"`
@@ -33,16 +44,7 @@ type Endurox struct {
 	} `xml:"defaults"`
 	Servers struct {
 		Comment   string `xml:",comment"`
-		Server []struct {
-			Comment   string `xml:",comment"`
-			Name   string `xml:"name,attr"`
-			Min    string `xml:"min"`
-			Max    string `xml:"max"`
-			Srvid  string `xml:"srvid"`
-			Sysopt string `xml:"sysopt"`
-			Cctag  string `xml:"cctag"`
-			Appopt string `xml:"appopt"`
-		} `xml:"server"`
+		Server []Server `xml:"server"`
 	} `xml:"servers"`
 	Clients struct {
 		Comment   string `xml:",comment"`
@@ -75,22 +77,6 @@ func ReadNdrxconfig() (e Endurox) {
 	if err != nil {
 		fmt.Printf("error: %v", err)
 		return
-	}
-
-	fmt.Printf("The lot: %#v\n", v)
-	fmt.Printf("Count: %d\n", len(v.Servers.Server))
-	fmt.Printf("Count: %#v\n", v.Servers.Server[0])
-
-	for _, e := range v.Servers.Server {
-		fmt.Printf("Name: %q Sysopt: %q\n", e.Name, e.Sysopt)
-		fmt.Printf("Appopt: %q\n", e.Appopt)
-	}
-
-
-	enc := xml.NewEncoder(os.Stdout)
-	enc.Indent("  ", "    ")
-	if err := enc.Encode(v); err != nil {
-		fmt.Printf("error: %v\n", err)
 	}
 
 	return v

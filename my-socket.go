@@ -1,23 +1,48 @@
 package main
 
 import (
+	"encoding/xml"
 	"net"
 	"fmt"
 	"time"
 	"strings"
+	"strconv"
 	"os"
 )
 
-var portToUse = 23001
-var listnerUsed = false
+var portToUse = 23000
+var srvid = 160
 
-func write(pc net.PacketConn) {
+func getDefaultBroadcastAddress() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if v, ok := address.(*net.IPNet); ok && !v.IP.IsLoopback() {
+			if v.IP.To4() != nil {
+				ip := v.IP
+				mask := v.Mask
+				ip = ip.To4()
+				fmt.Printf("ip, mask: %v, %v\n", ip, mask)
+				return fmt.Sprintf("%d.%d.%d.%d", ip[0] | ^mask[0], ip[1] | ^mask[1], ip[2] | ^mask[2], ip[3] | ^mask[3])
+			}
+		}
+	}
+	return "255.255.255.255"
+}
 
-  addr,err := net.ResolveUDPAddr("udp4", "192.168.86.255:8829")
-  if err != nil {
-    panic(err)
-  }
 
+
+func write(pc net.PacketConn, bcast string) {
+
+	//addr,err := net.ResolveUDPAddr("udp4", "192.168.86.255:8829")
+	addr,err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:8829", bcast))
+	if err != nil {
+		panic(err)
+	}
+	
 	for {
 		msg := fmt.Sprintf("From:%s:%d", os.Getenv("THOST"), portToUse)
 		_,err = pc.WriteTo([]byte(msg), addr)
@@ -30,7 +55,38 @@ func write(pc net.PacketConn) {
 
 var myAddress string = ""
 
-func updateConfig (addr net.Addr, b []byte) {
+func addTPBridge(conf Endurox, node, ip, mode string, port int) (c Endurox) {
+
+	appopt := fmt.Sprintf("-f -n %s -i %s -p %d -t%s -z30",
+		node, ip, port, mode)
+	
+	v:= Server{
+		Comment: "Added by TPDISCOVER service.",
+		Name: "tpbridge",
+		Min: "1",
+		Max: "1",
+		Srvid: fmt.Sprintf("%d", srvid),
+		Sysopt: fmt.Sprintf("-e ${NDRX_APPHOME}/log/tpbridge_%s.log -r", node),
+		Appopt: appopt,
+	}
+
+	srvid += 10
+
+	fmt.Printf("V := %#v\n",v)
+
+	conf.Servers.Server = append(conf.Servers.Server, v)
+
+	enc := xml.NewEncoder(os.Stdout)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(conf); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+	
+	return conf	
+
+}
+
+func updateConfig (addr net.Addr, b []byte, conf Endurox) (c Endurox) {
 
 	// check to see if tpbridge connection exists
 
@@ -38,30 +94,42 @@ func updateConfig (addr net.Addr, b []byte) {
 	m := strings.Split(myAddress, ":")
 	a := strings.Split(addr.String(), ":")
 	t := strings.Split(string(b), ":")
-	if a[0] < m[0] {
-		fmt.Printf("%s < %s : %s\n", a[0], m[0], b)
-		fmt.Printf("-f -n %s -i %s -p %s -tA -z30\n", t[1],
-			a[0], t[2])
+
+	if os.Getenv("THOST") < t[1] {
+		node, _ := strconv.Atoi(t[1])
+		fmt.Printf("%s < %s : %s\n", os.Getenv("THOST"), t[1], b)
+		fmt.Printf("-f -n %s -i %s -p %d -tA -z30\n", t[1],
+			a[0], portToUse + node)
+		conf = addTPBridge(conf, t[1], a[0], "A", portToUse + node)
 	} else {
-		fmt.Printf("%s > %s: %s\n", a[0], m[0], b)
+		node, _ := strconv.Atoi(os.Getenv("THOST"))
+		fmt.Printf("%s > %s: %s\n", os.Getenv("THOST"), t[1], b)
 		fmt.Printf("-f -n %s -i %s -p %d -tP -z30\n", t[1],
-			m[0], portToUse)
-		portToUse++
+			m[0], portToUse + node)
+		conf = addTPBridge(conf, t[1], m[0], "P", portToUse + node)
 		
 	}
 		
-
+	return conf
 
 }
 
 func main() {
 	pc,err := net.ListenPacket("udp4", ":8829")
-  if err != nil {
-    panic(err)
-  }
-  defer pc.Close()
+	if err != nil {
+		panic(err)
+	}
+	defer pc.Close()
 
-  go write(pc)
+	bcast := getDefaultBroadcastAddress()
+
+	fmt.Printf("broadcast addrss is: %s\n", bcast)
+
+	nxconf := ReadNdrxconfig()
+
+	fmt.Println("%#v", nxconf)
+	
+	go write(pc, bcast)
 
 	buf := make([]byte, 1024)
 	nodes := make(map[string]int)
@@ -79,7 +147,7 @@ func main() {
 		} else {
 			_, found := nodes[s[1]]
 			if ! found {
-				updateConfig(addr, buf[:n])
+				nxconf = updateConfig(addr, buf[:n], nxconf)
 				nodes[s[1]] = 0
 			}
 		}
