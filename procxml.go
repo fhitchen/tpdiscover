@@ -67,8 +67,8 @@ func ReadNdrxconfig() (e Endurox) {
 
 	v := Endurox{}
 
-//	buff, err := ioutil.ReadFile("ndrxconfig.xml")
-	buff, err := ioutil.ReadFile("x.xml")
+	buff, err := ioutil.ReadFile("ndrxconfig.xml")
+//	buff, err := ioutil.ReadFile("x.xml")
 	if err != nil {
 		fmt.Print(err)
 	}

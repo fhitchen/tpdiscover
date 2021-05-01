@@ -2,12 +2,15 @@ package main
 
 import (
 	"encoding/xml"
+	"io/ioutil"
 	"net"
 	"fmt"
 	"time"
 	"strings"
 	"strconv"
 	"os"
+	"os/exec"
+        log "github.com/sirupsen/logrus"	
 )
 
 var portToUse = 23000
@@ -57,7 +60,7 @@ var myAddress string = ""
 
 func addTPBridge(conf Endurox, node, ip, mode string, port int) (c Endurox) {
 
-	appopt := fmt.Sprintf("-f -n %s -i %s -p %d -t%s -z30",
+	appopt := fmt.Sprintf("-f -r -n %s -i %s -p %d -t%s -z30",
 		node, ip, port, mode)
 	
 	v:= Server{
@@ -70,17 +73,37 @@ func addTPBridge(conf Endurox, node, ip, mode string, port int) (c Endurox) {
 		Appopt: appopt,
 	}
 
-	srvid += 10
-
 	fmt.Printf("V := %#v\n",v)
 
 	conf.Servers.Server = append(conf.Servers.Server, v)
 
-	enc := xml.NewEncoder(os.Stdout)
+	file, _ := xml.MarshalIndent(conf, "", " ")
+ 
+	_ = ioutil.WriteFile("ndrxconfig.xml", file, 0644)
+
+	/*enc := xml.NewEncoder(os.Stdout)
 	enc.Indent("  ", "    ")
 	if err := enc.Encode(conf); err != nil {
 		fmt.Printf("error: %v\n", err)
-	}
+	}*/
+
+	cmd := exec.Command("/bin/sh", "-c", "xadmin reload")
+
+	_, err := cmd.Output()
+        if err != nil {
+                log.Fatal(fmt.Errorf("cmd.Run(1) failed with %w\n", err))
+        }
+	
+	xadminCmd := fmt.Sprintf("xadmin start -i %d", srvid)
+
+	cmd = exec.Command("/bin/sh", "-c", xadminCmd)
+
+	_, err = cmd.Output()
+        if err != nil {
+		log.Fatal(fmt.Errorf("cmd.Run(2) failed with %w\n", err))
+        }
+
+	srvid += 10
 	
 	return conf	
 
@@ -97,16 +120,18 @@ func updateConfig (addr net.Addr, b []byte, conf Endurox) (c Endurox) {
 
 	if os.Getenv("THOST") < t[1] {
 		node, _ := strconv.Atoi(t[1])
+		lnode, _ := strconv.Atoi(os.Getenv("THOST"))
 		fmt.Printf("%s < %s : %s\n", os.Getenv("THOST"), t[1], b)
 		fmt.Printf("-f -n %s -i %s -p %d -tA -z30\n", t[1],
-			a[0], portToUse + node)
-		conf = addTPBridge(conf, t[1], a[0], "A", portToUse + node)
+			a[0], portToUse + (lnode * 100) + node)
+		conf = addTPBridge(conf, t[1], a[0], "A", portToUse + (lnode * 100) + node)
 	} else {
 		node, _ := strconv.Atoi(os.Getenv("THOST"))
+		lnode, _ := strconv.Atoi(t[1])
 		fmt.Printf("%s > %s: %s\n", os.Getenv("THOST"), t[1], b)
 		fmt.Printf("-f -n %s -i %s -p %d -tP -z30\n", t[1],
-			m[0], portToUse + node)
-		conf = addTPBridge(conf, t[1], m[0], "P", portToUse + node)
+			m[0], portToUse + (lnode * 100) + node)
+		conf = addTPBridge(conf, t[1], m[0], "P", portToUse + (lnode * 100) + node)
 		
 	}
 		
