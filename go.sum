@@ -1,4 +1,6 @@
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/endurox-dev/endurox-go v0.0.0-20210315105639-8c25037585d9 h1:eBo1BsueNXa3qSY50I2tRlAlfmpdRdwif4L9AIUQ4xM=
+github.com/endurox-dev/endurox-go v0.0.0-20210315105639-8c25037585d9/go.mod h1:iyeP3hOXt5tc7657GlfMo7gOfwjqo6Y9e2da1kvNj0Y=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
