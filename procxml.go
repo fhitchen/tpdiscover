@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 
@@ -67,8 +68,8 @@ func ReadNdrxconfig() (e Endurox) {
 
 	v := Endurox{}
 
-	buff, err := ioutil.ReadFile("ndrxconfig.xml")
-//	buff, err := ioutil.ReadFile("x.xml")
+	buff, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", os.Getenv("NDRX_CCONFIG"), "ndrxconfig.xml"))
+
 	if err != nil {
 		fmt.Print(err)
 	}

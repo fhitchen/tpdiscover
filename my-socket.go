@@ -139,22 +139,7 @@ func updateConfig (addr net.Addr, b []byte, conf Endurox) (c Endurox) {
 
 }
 
-func main() {
-	pc,err := net.ListenPacket("udp4", ":8829")
-	if err != nil {
-		panic(err)
-	}
-	defer pc.Close()
-
-	bcast := getDefaultBroadcastAddress()
-
-	fmt.Printf("broadcast addrss is: %s\n", bcast)
-
-	nxconf := ReadNdrxconfig()
-
-	fmt.Println("%#v", nxconf)
-	
-	go write(pc, bcast)
+func read(pc net.PacketConn, nxconf Endurox) {
 
 	buf := make([]byte, 1024)
 	nodes := make(map[string]int)
@@ -177,4 +162,26 @@ func main() {
 			}
 		}
 	}
+
+
+}
+
+func startReadWrite() {
+	pc,err := net.ListenPacket("udp4", ":8829")
+	if err != nil {
+		panic(err)
+	}
+	defer pc.Close()
+
+	bcast := getDefaultBroadcastAddress()
+
+	fmt.Printf("broadcast addrss is: %s\n", bcast)
+
+	nxconf := ReadNdrxconfig()
+
+	fmt.Println("%#v", nxconf)
+	
+	go write(pc, bcast)
+
+	go read(pc, nxconf)
 }

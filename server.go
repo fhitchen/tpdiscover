@@ -19,6 +19,9 @@ func TPDISCOVER(ac *atmi.ATMICtx, svc *atmi.TPSVCINFO) {
 func Init(ac *atmi.ATMICtx) int {
 
         //Advertize TPDISCOVER
+
+	startReadWrite()
+	
         if err := ac.TpAdvertise("TPDISCOVER", "TPDISCOVER", TPDISCOVER); err != nil {
                 fmt.Println(err)
                 return atmi.FAIL
